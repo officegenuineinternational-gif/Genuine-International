@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "reviewed_at": "2026-09-29",
+  "base_commit": "1d821818002400f6f949df200c47ebd4491ea4b0",
+  "tools": {
+    "playwright_cli": {
+      "source": "microsoft/playwright-cli",
+      "version": "0.1.22",
+      "install": "npm install -g @playwright/cli@0.1.22",
+      "skills_install": "playwright-cli install --skills=agents"
+    },
+    "trivy": {
+      "source": "aquasecurity/trivy",
+      "version": "0.74.0",
+      "windows_amd64_asset": "trivy_0.74.0_windows-64bit.zip",
+      "windows_amd64_sha256": "94c40e0696e4b907a74b7b2e1438d5d72ebaca83115817407f568a002d520842",
+      "linux_amd64_asset": "trivy_0.74.0_Linux-64bit.tar.gz",
+      "linux_amd64_sha256": "2ae6fe3ee734b7fdf11335663e18c75ea12dccc76062f09f164a3b0f8be4371a"
+    },
+    "actionlint": {
+      "source": "rhysd/actionlint",
+      "version": "1.7.12",
+      "windows_amd64_asset": "actionlint_1.7.12_windows_amd64.zip",
+      "windows_amd64_sha256": "6e7241b51e6817ea6a047693d8e6fed13b31819c9a0dd6c5a726e1592d22f6e9",
+      "linux_amd64_asset": "actionlint_1.7.12_linux_amd64.tar.gz",
+      "linux_amd64_sha256": "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8"
+    },
+    "zizmor": {
+      "source": "zizmorcore/zizmor",
+      "version": "1.30.1",
+      "windows_amd64_asset": "zizmor-x86_64-pc-windows-msvc.zip",
+      "windows_amd64_sha256": "b183b1e996eddfab9659f1e9b46e059f1ef1cf984a1f14e5da09f7876a4b3a1c",
+      "linux_amd64_asset": "zizmor-x86_64-unknown-linux-gnu.tar.gz",
+      "linux_amd64_sha256": "e65324f4430c2717591937edcec90ccbefaf14c174f8ec9415e03ca875b46e1a"
+    },
+    "actions_checkout": {
+      "source": "actions/checkout",
+      "version": "7.0.1",
+      "commit_sha": "3d3c42e5aac5ba805825da76410c181273ba90b1"
+    }
+  }
+}

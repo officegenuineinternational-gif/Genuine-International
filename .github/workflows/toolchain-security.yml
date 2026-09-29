@@ -1,0 +1,98 @@
+name: Toolchain Security Gate
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/**"
+      - "tools/**"
+      - "docs/TOOLCHAIN_POLICY.md"
+      - "docs/AGENT_TOOL_ROUTING.md"
+  push:
+    branches: ["main"]
+    paths:
+      - ".github/workflows/**"
+      - "tools/**"
+      - "docs/TOOLCHAIN_POLICY.md"
+      - "docs/AGENT_TOOL_ROUTING.md"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-toolchain:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Validate lock file
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p = Path("tools/toolchain.lock.json")
+          data = json.loads(p.read_text(encoding="utf-8"))
+          assert data["schema_version"] == 1
+          required = {"playwright_cli","trivy","actionlint","zizmor","actions_checkout"}
+          missing = required - set(data["tools"])
+          if missing:
+              raise SystemExit(f"Missing locked tools: {sorted(missing)}")
+          print("Toolchain lock file is valid.")
+          PY
+
+      - name: Install pinned actionlint
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --silent --show-error             -o /tmp/actionlint.tar.gz             https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz
+          echo "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8  /tmp/actionlint.tar.gz" | sha256sum --check -
+          tar -xzf /tmp/actionlint.tar.gz -C /tmp
+          install -m 0755 /tmp/actionlint /usr/local/bin/actionlint
+          actionlint -version
+
+      - name: Lint GitHub Actions
+        shell: bash
+        run: |
+          set -euo pipefail
+          actionlint
+
+      - name: Install pinned zizmor
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --silent --show-error             -o /tmp/zizmor.tar.gz             https://github.com/zizmorcore/zizmor/releases/download/v1.30.1/zizmor-x86_64-unknown-linux-gnu.tar.gz
+          echo "e65324f4430c2717591937edcec90ccbefaf14c174f8ec9415e03ca875b46e1a  /tmp/zizmor.tar.gz" | sha256sum --check -
+          mkdir -p /tmp/zizmor-bin
+          tar -xzf /tmp/zizmor.tar.gz -C /tmp/zizmor-bin
+          install -m 0755 /tmp/zizmor-bin/zizmor /usr/local/bin/zizmor
+          zizmor --version
+
+      - name: Audit GitHub Actions security
+        shell: bash
+        run: |
+          set -euo pipefail
+          zizmor --collect=workflows .
+
+      - name: Install pinned Trivy
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --silent --show-error             -o /tmp/trivy.tar.gz             https://github.com/aquasecurity/trivy/releases/download/v0.74.0/trivy_0.74.0_Linux-64bit.tar.gz
+          echo "2ae6fe3ee734b7fdf11335663e18c75ea12dccc76062f09f164a3b0f8be4371a  /tmp/trivy.tar.gz" | sha256sum --check -
+          mkdir -p /tmp/trivy-bin
+          tar -xzf /tmp/trivy.tar.gz -C /tmp/trivy-bin
+          install -m 0755 /tmp/trivy-bin/trivy /usr/local/bin/trivy
+          trivy --version
+
+      - name: Scan repository
+        shell: bash
+        run: |
+          set -euo pipefail
+          trivy fs             --scanners vuln,secret,misconfig             --severity HIGH,CRITICAL             --exit-code 1             --no-progress             .
