@@ -1,0 +1,36 @@
+name: Workspace Lockfile Generator
+
+on:
+  push:
+    branches:
+      - workspace-lockgen-20260929
+    paths:
+      - "workspace-lockgen/package.json"
+      - ".github/workflows/workspace-lockgen.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  generate-lockfile:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: workspace-lockgen
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          registry-url: "https://registry.npmjs.org"
+      - name: Generate deterministic lockfile
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: Verify approved baselines
+        run: |
+          node -e "const p=require('./package-lock.json'); const r=p.packages['']; if(r.dependencies.next!=='16.3.6'||r.dependencies.react!=='19.2.8'||r.dependencies['react-dom']!=='19.2.8') process.exit(1)"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: genuine-workspace-package-lock
+          path: workspace-lockgen/package-lock.json
+          if-no-files-found: error
+          retention-days: 1
