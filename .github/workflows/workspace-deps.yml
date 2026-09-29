@@ -1,0 +1,40 @@
+name: Workspace Dependency Bundle
+
+on:
+  push:
+    branches:
+      - workspace-lockgen-20260929
+    paths:
+      - "workspace-lockgen/package.json"
+      - ".github/workflows/workspace-deps.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  dependency-bundle:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: workspace-lockgen
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          registry-url: "https://registry.npmjs.org"
+      - name: Generate exact lockfile
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: Install exact dependency tree
+        run: npm ci --no-audit --no-fund
+      - name: Verify approved versions
+        run: |
+          node -e "for (const [n,v] of Object.entries({next:'16.3.6',react:'19.2.8','react-dom':'19.2.8'})){const a=require('./node_modules/'+n+'/package.json').version;if(a!==v){console.error(n,a,v);process.exit(1)}}"
+      - name: Archive dependency tree
+        run: tar -czf ../genuine-workspace-node-modules-linux-x64.tgz node_modules
+      - uses: actions/upload-artifact@v4
+        with:
+          name: genuine-workspace-node-modules-linux-x64
+          path: genuine-workspace-node-modules-linux-x64.tgz
+          if-no-files-found: error
+          retention-days: 1
