@@ -1,0 +1,45 @@
+name: Windows Toolchain Smoke Test
+
+on:
+  pull_request:
+    paths:
+      - "tools/bootstrap-windows.ps1"
+      - "tools/toolchain.lock.json"
+      - ".github/workflows/windows-toolchain-smoke.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows-bootstrap:
+    runs-on: windows-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Run checksum-verified bootstrap
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          ./tools/bootstrap-windows.ps1 -InstallRoot "$env:RUNNER_TEMP\GenuineTools"
+
+      - name: Verify installed tools
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $bin = "$env:RUNNER_TEMP\GenuineTools\bin"
+          if (-not (Test-Path "$bin\trivy.exe")) { throw "trivy.exe missing" }
+          if (-not (Test-Path "$bin\actionlint.exe")) { throw "actionlint.exe missing" }
+          if (-not (Test-Path "$bin\zizmor.exe")) { throw "zizmor.exe missing" }
+
+          playwright-cli --help | Out-Null
+          & "$bin\trivy.exe" --version
+          & "$bin\actionlint.exe" -version
+          & "$bin\zizmor.exe" --version
+
+          Write-Host "Windows toolchain smoke test passed."
