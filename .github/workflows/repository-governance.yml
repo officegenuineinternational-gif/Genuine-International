@@ -35,7 +35,7 @@ jobs:
         run: |
           set -euo pipefail
           grep -Fq 'officegenuineinternational-gif/HYROBOOKS' README.md
-          grep -Fq 'canonical' README.md
+          grep -Fiq 'canonical' README.md
           echo "Canonical routing is present."
 
       - name: Verify repository boundary
