@@ -1,0 +1,56 @@
+name: HYROBOOKS Control Gates
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  governance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify control-plane files
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s AGENTS.md
+          test -s docs/OPERATING_MODEL.md
+          test -s .github/pull_request_template.md
+          grep -q "owner is the final authority" AGENTS.md
+          grep -q "Explicit owner approval is required" AGENTS.md
+          grep -q "Tests + security + reconciliation" docs/OPERATING_MODEL.md
+
+  repository-sanity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reject committed secret files
+        shell: bash
+        run: |
+          set -euo pipefail
+          bad="$(git ls-files | grep -E '(^|/)(\.env|\.env\..+|id_rsa|id_ed25519|.*\.pem|.*\.p12)$' || true)"
+          if [ -n "$bad" ]; then
+            echo "Potential secret-bearing files are tracked:"
+            echo "$bad"
+            exit 1
+          fi
+          echo "Repository sanity checks passed."
+
+  project-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Detect project test entrypoint
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -f package.json ]; then
+            echo "package.json detected; running npm test when defined."
+            npm ci
+            npm test --if-present
+          else
+            echo "No application package.json in this control repository; no app test suite to execute."
+          fi
