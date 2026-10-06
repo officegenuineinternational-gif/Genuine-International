@@ -1,0 +1,59 @@
+name: Repository Governance
+
+on:
+  pull_request:
+    paths:
+      - "README.md"
+      - "SECURITY.md"
+      - "AGENTS.md"
+      - ".github/**"
+      - "docs/**"
+  push:
+    branches: [main]
+    paths:
+      - "README.md"
+      - "SECURITY.md"
+      - "AGENTS.md"
+      - ".github/**"
+      - "docs/**"
+
+permissions:
+  contents: read
+
+jobs:
+  governance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Verify canonical routing
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fq 'officegenuineinternational-gif/HYROBOOKS' README.md
+          grep -Fq 'canonical' README.md
+          echo "Canonical routing is present."
+
+      - name: Verify repository boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import subprocess
+          blocked_dirs = {'state', 'logs', 'd1-backups', 'soa-cache', 'secrets'}
+          blocked_ext = {'.pem', '.pfx', '.p12', '.key'}
+          files = subprocess.check_output(['git','ls-files'], text=True).splitlines()
+          bad = []
+          for f in files:
+              parts = set(f.replace('\\','/').split('/'))
+              lower = f.lower()
+              if parts & blocked_dirs or any(lower.endswith(x) for x in blocked_ext):
+                  bad.append(f)
+          if bad:
+              raise SystemExit('Blocked runtime/sensitive paths tracked: ' + ', '.join(bad))
+          print('Repository boundary passed.')
+          PY
